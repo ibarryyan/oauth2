@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+var (
+	loginName = "ymx"
+	passWord  = "123"
+)
+
 //authorize 三方授权服务点击确认授权
 func authorize(w http.ResponseWriter, r *http.Request) {
 	if dumpvar {
@@ -101,6 +106,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		if !checkPwd(r.Form.Get("username"), r.Form.Get("password")) {
+			outputHTML(w, r, "static/login.html")
+		}
 		store.Set("LoggedInUserID", r.Form.Get("username"))
 		store.Save()
 
@@ -160,4 +168,9 @@ func test(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	e.Encode(data)
+}
+
+//密码验证
+func checkPwd(name, pwd string) bool {
+	return loginName == name && pwd == passWord
 }
