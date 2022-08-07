@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"golang.org/x/oauth2"
 	"log"
 	"net/http"
@@ -27,23 +25,21 @@ var (
 )
 
 func main() {
+	//授权码模式Authorization Code
+	//访问第三方授权页
 	http.HandleFunc("/", index)
-
+	//由三方鉴权服务重定向返回，拿到code，并请求和验证token
 	http.HandleFunc("/oauth2", oAuth2)
-
+	//刷新验证码
 	http.HandleFunc("/refresh", refresh)
-
 	http.HandleFunc("/try", try)
 
+	//密码模式Resource Owner Password Credentials
 	http.HandleFunc("/pwd", pwd)
 
+	//客户端模式Client Credentials
 	http.HandleFunc("/client", client)
 
 	log.Println("Client is running at 9094 port.Please open http://localhost:9094")
 	log.Fatal(http.ListenAndServe(":9094", nil))
-}
-
-func genCodeChallengeS256(s string) string {
-	s256 := sha256.Sum256([]byte(s))
-	return base64.URLEncoding.EncodeToString(s256[:])
 }

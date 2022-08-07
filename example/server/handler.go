@@ -11,26 +11,24 @@ import (
 	"time"
 )
 
+//authorize 三方授权服务点击确认授权
 func authorize(w http.ResponseWriter, r *http.Request) {
 	if dumpvar {
 		dumpRequest(os.Stdout, "authorize", r)
 	}
-
 	store, err := session.Start(r.Context(), w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	var form url.Values
 	if v, ok := store.Get("ReturnUri"); ok {
 		form = v.(url.Values)
 	}
 	r.Form = form
-
 	store.Delete("ReturnUri")
 	store.Save()
-
+	//重定向
 	err = srv.HandleAuthorizeRequest(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -41,7 +39,6 @@ func token(w http.ResponseWriter, r *http.Request) {
 	if dumpvar {
 		_ = dumpRequest(os.Stdout, "token", r) // Ignore the error
 	}
-
 	err := srv.HandleTokenRequest(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -66,7 +63,6 @@ func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string
 	if err != nil {
 		return
 	}
-
 	uid, ok := store.Get("LoggedInUserID")
 	if !ok {
 		if r.Form == nil {
@@ -87,6 +83,7 @@ func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string
 	return
 }
 
+//loginHandler 三方授权登录
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if dumpvar {
 		_ = dumpRequest(os.Stdout, "login", r) // Ignore the error
@@ -114,6 +111,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	outputHTML(w, r, "static/login.html")
 }
 
+//authHandler
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	if dumpvar {
 		_ = dumpRequest(os.Stdout, "auth", r) // Ignore the error

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"golang.org/x/oauth2"
@@ -11,6 +13,7 @@ import (
 	"time"
 )
 
+//index 重定向到三方授权服务器
 func index(w http.ResponseWriter, r *http.Request) {
 	u := config.AuthCodeURL("xyz",
 		oauth2.SetAuthURLParam("code_challenge", genCodeChallengeS256("s256example")),
@@ -18,6 +21,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, u, http.StatusFound)
 }
 
+//oAuth2 由三方鉴权服务返回，拿到code，并请求和验证token
 func oAuth2(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	state := r.Form.Get("state")
@@ -30,6 +34,7 @@ func oAuth2(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Code not found", http.StatusBadRequest)
 		return
 	}
+	// 获取token
 	token, err := config.Exchange(context.Background(), code, oauth2.SetAuthURLParam("code_verifier", "s256example"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -47,14 +52,12 @@ func refresh(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-
 	globalToken.Expiry = time.Now()
 	token, err := config.TokenSource(context.Background(), globalToken).Token()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	globalToken = token
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
@@ -66,14 +69,12 @@ func try(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-
 	resp, err := http.Get(fmt.Sprintf("%s/test?access_token=%s", authServerURL, globalToken.AccessToken))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer resp.Body.Close()
-
 	io.Copy(w, resp.Body)
 }
 
@@ -83,7 +84,6 @@ func pwd(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	globalToken = token
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
@@ -106,4 +106,9 @@ func client(w http.ResponseWriter, r *http.Request) {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	e.Encode(token)
+}
+
+func genCodeChallengeS256(s string) string {
+	s256 := sha256.Sum256([]byte(s))
+	return base64.URLEncoding.EncodeToString(s256[:])
 }
